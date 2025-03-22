@@ -1,2 +1,31 @@
 # macropad_to_gamepad
-Mirror HID keyboard keys as HID Joystick buttons
+
+I Have:
+- Elite Dangerous
+- A left VKB joystick
+- A right VKB joystick
+- A Koolertron AE-SMKD / LingYao ShangHai Thumb Keyboard
+  -- Based on the CY8C24794-24LTXI
+  -- 46 programmable keys
+  -- not the current model
+- A need for even more buttons
+- Linux
+- Steam
+- Proton
+- Python 3
+
+They say F13 through F24 make good macro keys. They are not quite right - /usr/share/X11/xkb/symbols/inet reserves them all for stuff like enabling/disabling/toggling touchpad. 
+
+They work with Modifiers. Meta+F13 (looks like Win+F13 if it actually existed), Alt+F13, Ctrl+F13, Shift+F13 - 48 single mod keys.
+
+Which Elite Dangerous will ignore. So This script
+- Finds your macropad with F13 mapped, lest it select the emulated mouse you aren't using
+- Creates a virtual Joystick named after it
+- Emits button presses in the BTN_TRIGGER_HAPPY1 linux kernel event range, lest your button orders com out different than your FKEY orders
+- Checks your Binds file that all the mentioned joysicks are attached, including the virtual ones
+
+THANKS UTILITIES
+- `jstest-gtk /dev/input/js2`
+- `evtest`
+- `libinput list-devices`
+- `dmesg`
