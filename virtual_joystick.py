@@ -10,7 +10,7 @@ from evdev import InputDevice, categorize, ecodes, UInput, list_devices, AbsInfo
 parser = argparse.ArgumentParser(description="Virtual Joystick")
 parser.add_argument('--vendor', type=lambda x: int(x, 16), default=0x04B4, help='Vendor ID in hex (e.g. 04B4)')
 parser.add_argument('--product', type=lambda x: int(x, 16), default=0x0818, help='Product ID in hex (e.g. 0818)')
-parser.add_argument('--debug', action='store_true', help='Suppress button press/release output for debugging')
+parser.add_argument('--debug', action='store_true', help='Show button press/release output for debugging')
 args = parser.parse_args()
 
 # Target HID device
