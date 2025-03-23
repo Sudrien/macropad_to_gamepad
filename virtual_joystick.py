@@ -1,9 +1,21 @@
 import time
+import argparse
+import os
+import fcntl
+import array
+import time as systime
 from evdev import InputDevice, categorize, ecodes, UInput, list_devices, AbsInfo
 
+# Argument parsing
+parser = argparse.ArgumentParser(description="Virtual Joystick")
+parser.add_argument('--vendor', type=lambda x: int(x, 16), default=0x04B4, help='Vendor ID in hex (e.g. 04B4)')
+parser.add_argument('--product', type=lambda x: int(x, 16), default=0x0818, help='Product ID in hex (e.g. 0818)')
+parser.add_argument('--test', action='store_true', help='Suppress button press/release output for testing')
+args = parser.parse_args()
+
 # Target HID device
-TARGET_VENDOR = 0x04B4
-TARGET_PRODUCT = 0x0818
+TARGET_VENDOR = args.vendor
+TARGET_PRODUCT = args.product
 
 # Modifier keys
 MOD_KEYS = {
@@ -13,7 +25,7 @@ MOD_KEYS = {
     ecodes.KEY_RIGHTALT: 'alt',
     ecodes.KEY_LEFTSHIFT: 'shift',
     ecodes.KEY_RIGHTSHIFT: 'shift',
-    ecodes.KEY_LEFTMETA: 'meta', # often labeled windows logo
+    ecodes.KEY_LEFTMETA: 'meta',
     ecodes.KEY_RIGHTMETA: 'meta',
 }
 
@@ -28,17 +40,15 @@ fkey_base = [
 
 # Button offsets per modifier
 modifier_offsets = {
-    None: 0,         # No modifier → BTN 0–11
-    'meta': 0,       # No modifier → BTN 0–11
-    'ctrl': 12,      # BTN 12–23
-    'alt': 24,       # BTN 24–35
-    'shift': 36      # BTN 36–47
+    'meta': 0,
+    'ctrl': 12,
+    'alt': 24,
+    'shift': 36
 }
 
-# Custom base event code for buttons, 'BTN_TRIGGER_HAPPY1'
+# Custom base event code for buttons
 CUSTOM_BTN_BASE = 704
 
-# Resolve current modifier (only one at a time, priority: ctrl > alt > shift)
 def current_modifier():
     if mod_state['meta']:
         return 'meta'
@@ -50,13 +60,11 @@ def current_modifier():
         return 'shift'
     return None
 
-# Map F-key + modifier to virtual button
 def get_virtual_button(fkey_code, modifier):
-    base_index = fkey_code - ecodes.KEY_F13  # 0–11
+    base_index = fkey_code - ecodes.KEY_F13
     offset = modifier_offsets[modifier]
     return CUSTOM_BTN_BASE + base_index + offset
 
-# Store modifier state at key press time
 fkey_pressed_mods = {}
 
 # Find the device
@@ -72,46 +80,80 @@ if not device_path:
     exit(1)
 
 device = InputDevice(device_path)
+device.grab()
 print(f"Listening to: {device.name} ({device_path})")
 
-# Define virtual joystick buttons starting at custom code 704, 'BTN_TRIGGER_HAPPY1'
+# Define virtual joystick buttons starting at custom code 704 and add dummy axis
 virt_buttons = [CUSTOM_BTN_BASE + i for i in range(48)]
+
 capabilities = {
-    ecodes.EV_KEY: virt_buttons
+    ecodes.EV_KEY: virt_buttons,
+    ecodes.EV_ABS: {
+        ecodes.ABS_Z: AbsInfo(value=0, min=0, max=255, fuzz=0, flat=15, resolution=0)
+    }
 }
 
-ui = UInput(events=capabilities, name="LingYao ShangHai Thumb Keyboard Gamepad", version=0x3, vendor=TARGET_VENDOR, product=TARGET_PRODUCT)
+ui = UInput(events=capabilities, name=f"{dev.name} Virtual Joystick", version=dev.version, vendor=dev.info.vendor, product=dev.info.product)
 print("Virtual joystick created.")
-print(f"Virtual joystick vendor:product = {ui.device.info.vendor:04X}:{ui.device.info.product:04X}\n")
+print(f"Virtual joystick vendor:product = {ui.device.info.vendor:04X}:{ui.device.info.product:04X}")
+
+for path in list_devices():
+    try:
+        test_dev = InputDevice(path)
+        if test_dev.name == f"{dev.name} Virtual Joystick" and \
+           test_dev.info.vendor == dev.info.vendor and \
+           test_dev.info.product == dev.info.product:
+            print(f"Virtual device event node: {path}")
+            break
+    except Exception:
+        continue
+
+def get_js_device_name(fd):
+    buf = array.array('B', [0] * 128)
+    fcntl.ioctl(fd, 0x80006a13 + (128 << 16), buf)
+    return buf.tobytes().rstrip(b'\x00').decode('utf-8')
+
+js_paths = sorted(os.listdir('/dev/input'))
+for js in js_paths:
+    if js.startswith("js"):
+        full_path = f"/dev/input/{js}"
+        try:
+            with open(full_path, 'rb') as fd:
+                name = get_js_device_name(fd.fileno())
+                if name == f"{dev.name} Virtual Joystick":
+                    print(f"Virtual device joystick node: {full_path}\n")
+                    break
+        except Exception:
+            continue
 
 # Main loop
+print("Press Ctrl+C to exit.")
 try:
     for event in device.read_loop():
         if event.type != ecodes.EV_KEY:
             continue
 
         code = event.code
-        value = event.value  # 1 = press, 0 = release
+        value = event.value
 
-        # Modifier handling
         if code in MOD_KEYS:
             mod_state[MOD_KEYS[code]] = bool(value)
             continue
 
-        # F-key handling
         if code in fkey_base:
-            if value == 1:  # Key press
+            if value == 1:
                 modifier = current_modifier()
                 fkey_pressed_mods[code] = modifier
-            else:  # Key release
+            else:
                 modifier = fkey_pressed_mods.pop(code, None)
 
             virt_button = get_virtual_button(code, modifier)
             ui.write(ecodes.EV_KEY, virt_button, value)
             ui.syn()
-            mod = modifier or "none"
-            btn_num = virt_button - CUSTOM_BTN_BASE
-            print(f"{mod.upper()} + {ecodes.KEY[code]} → Button {btn_num} {'DOWN' if value else 'UP'}")
+            if args.test:
+                mod = modifier or "none"
+                btn_num = virt_button - CUSTOM_BTN_BASE
+                print(f"{mod.upper()} + {ecodes.KEY[code]} → Button {btn_num} {'DOWN' if value else 'UP'}")
 
 except KeyboardInterrupt:
     print("\nExiting.")
