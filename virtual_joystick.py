@@ -10,7 +10,7 @@ from evdev import InputDevice, categorize, ecodes, UInput, list_devices, AbsInfo
 parser = argparse.ArgumentParser(description="Virtual Joystick")
 parser.add_argument('--vendor', type=lambda x: int(x, 16), default=0x04B4, help='Vendor ID in hex (e.g. 04B4)')
 parser.add_argument('--product', type=lambda x: int(x, 16), default=0x0818, help='Product ID in hex (e.g. 0818)')
-parser.add_argument('--test', action='store_true', help='Suppress button press/release output for testing')
+parser.add_argument('--debug', action='store_true', help='Suppress button press/release output for debugging')
 args = parser.parse_args()
 
 # Target HID device
@@ -150,7 +150,7 @@ try:
             virt_button = get_virtual_button(code, modifier)
             ui.write(ecodes.EV_KEY, virt_button, value)
             ui.syn()
-            if args.test:
+            if args.debug:
                 mod = modifier or "none"
                 btn_num = virt_button - CUSTOM_BTN_BASE
                 print(f"{mod.upper()} + {ecodes.KEY[code]} → Button {btn_num} {'DOWN' if value else 'UP'}")
