@@ -6,7 +6,7 @@ I Have:
 - A right VKB joystick
 - A Koolertron AE-SMKD / LingYao ShangHai Thumb Keyboard
   - Based on the CY8C24794-24LTXI
-  - 46 programmable keys
+  - 44-48 programmable keys
   - not the current model
 - A need for even more buttons
 - Linux
