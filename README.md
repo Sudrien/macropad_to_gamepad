@@ -41,7 +41,8 @@ ADDITIONAL NOTES
 - JoystickGremlin is Windows. VoiceAttack is Windows. Thank you python programmers who write things that aren't windows only.
 - Koolertron specific
   - https://www.koolertron.com/user-manual-software-download
-  - http://amazonfiles.s3.amazonaws.com/smkd72.rar
+  - http://amazonfiles.s3.amazonaws.com/smkd72.rar (archived here)
   - http://www.smartyao.com/page91?_l=en
-  - http://dme657285d3.pic11.websiteonline.cn/upload/TK_V521_En_230221.rar
+  - http://dme657285d3.pic11.websiteonline.cn/upload/TK_V521_En_230221.rar (archived here)
+  - FKEY_and_modifiers_profile.bin is a layout for the 46 key version, 44 and 48 key versions exist and will need a little more work
 
