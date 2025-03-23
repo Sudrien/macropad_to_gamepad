@@ -5,9 +5,9 @@ I Have:
 - A left VKB joystick
 - A right VKB joystick
 - A Koolertron AE-SMKD / LingYao ShangHai Thumb Keyboard
-  -- Based on the CY8C24794-24LTXI
-  -- 46 programmable keys
-  -- not the current model
+  - Based on the CY8C24794-24LTXI
+  - 46 programmable keys
+  - not the current model
 - A need for even more buttons
 - Linux
 - Steam
@@ -39,3 +39,7 @@ ADDITIONAL NOTES
 - If the CY8C24794 wasn't so old, sure I could try properly programming it as an HID joystick device. But I'm not whatchacall *good*. psoc designer is beyond me. Also [QMK developers](https://github.com/qmk/qmk_firmware/issues/6536).
 - Manually existing the binds file to change `<Primary Device="Keyboard" Key="Key_W" />` to `<Primary Device="04B40818" Key="Key_W" />` is corrupting the file, according to the parser. It creates a log file in the custom binds directory.
 - JoystickGremlin is Windows. VoiceAttack is Windows. Thank you python programmers who write things that aren't windows only.
+- Koolertron specific
+  - https://www.koolertron.com/user-manual-software-download
+  - http://amazonfiles.s3.amazonaws.com/smkd72.rar
+
