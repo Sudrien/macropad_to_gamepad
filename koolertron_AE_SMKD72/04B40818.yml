@@ -1,102 +1,116 @@
+# koolertron_AE_SMKD72
+---
 vendor: 0x04B4
 product: 0x0818
 key_mappings:
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F13]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F13
     action: btn_1
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F14]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F14
     action: btn_2
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F15]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F15
     action: btn_3
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F16]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F16
     action: btn_4
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F17]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F17
     action: btn_5
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F18]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F18
     action: btn_6
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F19]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F19
     action: btn_7
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F20]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F20
     action: btn_8
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F21]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F21
     action: btn_9
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F22]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F22
     action: btn_10
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F23]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F23
     action: btn_11
-  - combo: [KEY_LEFTMETA|KEY_RIGHTMETA, KEY_F24]
+  - combo:
+      - KEY_LEFTMETA|KEY_RIGHTMETA
+      - KEY_F24
     action: btn_12
-
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F13]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F13
     action: btn_13
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F14]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F14
     action: btn_14
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F15]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F15
     action: btn_15
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F16]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F16
     action: btn_16
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F17]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F17
     action: btn_17
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F18]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F18
     action: btn_18
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F19]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F19
     action: btn_19
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F20]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F20
     action: btn_20
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F21]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F21
     action: btn_21
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F22]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F22
     action: btn_22
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F23]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F23
     action: btn_23
-  - combo: [KEY_LEFTCTRL|KEY_RIGHTCTRL, KEY_F24]
+  - combo:
+      - KEY_LEFTCTRL|KEY_RIGHTCTRL
+      - KEY_F24
     action: btn_24
-
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F13]
+  - combo:
+      - KEY_LEFTALT|KEY_RIGHTALT
+      - KEY_F13
     action: btn_25
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F14]
+  - combo:
+      - KEY_LEFTALT|KEY_RIGHTALT
+      - KEY_F14
     action: btn_26
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F15]
+  - combo:
+      - KEY_LEFTALT|KEY_RIGHTALT
+      - KEY_F15
     action: btn_27
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F16]
-    action: btn_28
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F17]
-    action: btn_29
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F18]
-    action: btn_30
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F19]
-    action: btn_31
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F20]
-    action: btn_32
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F21]
-    action: btn_33
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F22]
-    action: btn_34
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F23]
-    action: btn_35
-  - combo: [KEY_LEFTALT|KEY_RIGHTALT, KEY_F24]
-    action: btn_36
-
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F13]
-    action: btn_37
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F14]
-    action: btn_38
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F15]
-    action: btn_39
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F16]
-    action: btn_40
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F17]
-    action: btn_41
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F18]
-    action: btn_42
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F19]
-    action: btn_43
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F20]
-    action: btn_44
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F21]
-    action: btn_45
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F22]
-    action: btn_46
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F23]
-    action: btn_47
-  - combo: [KEY_LEFTSHIFT|KEY_RIGHTSHIFT, KEY_F24]
-    action: btn_48
+  - combo:
+      - KEY_LEFTALT|KEY_RIGHTALT
+      - KEY_F16
