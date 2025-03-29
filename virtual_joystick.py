@@ -4,6 +4,7 @@ import os
 import fcntl
 import array
 import time as systime
+import yaml
 from evdev import InputDevice, categorize, ecodes, UInput, list_devices, AbsInfo
 
 # Argument parsing
@@ -13,59 +14,42 @@ parser.add_argument('--product', type=lambda x: int(x, 16), default=0x0818, help
 parser.add_argument('--debug', action='store_true', help='Show button press/release output for debugging')
 args = parser.parse_args()
 
+# Load YAML config
+config_filename = f"{args.vendor:04X}{args.product:04X}.yml"
+if not os.path.exists(config_filename):
+    print(f"Configuration file {config_filename} not found.")
+    exit(1)
+
+with open(config_filename, 'r') as f:
+    config = yaml.safe_load(f)
+
+combo_map = {}
+for entry in config.get('key_mappings', []):
+    mod_combo = entry['combo'][0].split('|')
+    key = entry['combo'][1]
+    action = entry['action']
+    combo_map[(frozenset(mod_combo), key)] = action
+
 # Target HID device
 TARGET_VENDOR = args.vendor
 TARGET_PRODUCT = args.product
 
 # Modifier keys
 MOD_KEYS = {
-    ecodes.KEY_LEFTCTRL: 'ctrl',
-    ecodes.KEY_RIGHTCTRL: 'ctrl',
-    ecodes.KEY_LEFTALT: 'alt',
-    ecodes.KEY_RIGHTALT: 'alt',
-    ecodes.KEY_LEFTSHIFT: 'shift',
-    ecodes.KEY_RIGHTSHIFT: 'shift',
-    ecodes.KEY_LEFTMETA: 'meta',
-    ecodes.KEY_RIGHTMETA: 'meta',
+    ecodes.KEY_LEFTCTRL: 'KEY_LEFTCTRL',
+    ecodes.KEY_RIGHTCTRL: 'KEY_RIGHTCTRL',
+    ecodes.KEY_LEFTALT: 'KEY_LEFTALT',
+    ecodes.KEY_RIGHTALT: 'KEY_RIGHTALT',
+    ecodes.KEY_LEFTSHIFT: 'KEY_LEFTSHIFT',
+    ecodes.KEY_RIGHTSHIFT: 'KEY_RIGHTSHIFT',
+    ecodes.KEY_LEFTMETA: 'KEY_LEFTMETA',
+    ecodes.KEY_RIGHTMETA: 'KEY_RIGHTMETA',
 }
 
-mod_state = {'ctrl': False, 'alt': False, 'shift': False, 'meta': False}
-
-# Base F-keys
-fkey_base = [
-    ecodes.KEY_F13, ecodes.KEY_F14, ecodes.KEY_F15, ecodes.KEY_F16,
-    ecodes.KEY_F17, ecodes.KEY_F18, ecodes.KEY_F19, ecodes.KEY_F20,
-    ecodes.KEY_F21, ecodes.KEY_F22, ecodes.KEY_F23, ecodes.KEY_F24
-]
-
-# Button offsets per modifier
-modifier_offsets = {
-    'meta': 0,
-    'ctrl': 12,
-    'alt': 24,
-    'shift': 36
-}
+mod_state = {k: False for k in MOD_KEYS.values()}
 
 # Custom base event code for buttons
 CUSTOM_BTN_BASE = 704
-
-def current_modifier():
-    if mod_state['meta']:
-        return 'meta'
-    if mod_state['ctrl']:
-        return 'ctrl'
-    if mod_state['alt']:
-        return 'alt'
-    if mod_state['shift']:
-        return 'shift'
-    return None
-
-def get_virtual_button(fkey_code, modifier):
-    base_index = fkey_code - ecodes.KEY_F13
-    offset = modifier_offsets[modifier]
-    return CUSTOM_BTN_BASE + base_index + offset
-
-fkey_pressed_mods = {}
 
 # Find the device
 device_path = None
@@ -97,36 +81,16 @@ ui = UInput(events=capabilities, name=f"{dev.name} Virtual Joystick", version=de
 print("Virtual joystick created.")
 print(f"Virtual joystick vendor:product = {ui.device.info.vendor:04X}:{ui.device.info.product:04X}")
 
-for path in list_devices():
-    try:
-        test_dev = InputDevice(path)
-        if test_dev.name == f"{dev.name} Virtual Joystick" and \
-           test_dev.info.vendor == dev.info.vendor and \
-           test_dev.info.product == dev.info.product:
-            print(f"Virtual device event node: {path}")
-            break
-    except Exception:
-        continue
+# Track state of each button
+button_states = {}
+for (_, _), action in combo_map.items():
+    btn_num = int(action.replace('btn_', ''))
+    button_states[btn_num] = 'released'
 
-def get_js_device_name(fd):
-    buf = array.array('B', [0] * 128)
-    fcntl.ioctl(fd, 0x80006a13 + (128 << 16), buf)
-    return buf.tobytes().rstrip(b'\x00').decode('utf-8')
+# Press tracking
+mod_keys_down = set()
+fkeys_down = set()
 
-js_paths = sorted(os.listdir('/dev/input'))
-for js in js_paths:
-    if js.startswith("js"):
-        full_path = f"/dev/input/{js}"
-        try:
-            with open(full_path, 'rb') as fd:
-                name = get_js_device_name(fd.fileno())
-                if name == f"{dev.name} Virtual Joystick":
-                    print(f"Virtual device joystick node: {full_path}\n")
-                    break
-        except Exception:
-            continue
-
-# Main loop
 print("Press Ctrl+C to exit.")
 try:
     for event in device.read_loop():
@@ -136,24 +100,77 @@ try:
         code = event.code
         value = event.value
 
-        if code in MOD_KEYS:
-            mod_state[MOD_KEYS[code]] = bool(value)
+        key_name = ecodes.KEY.get(code, str(code))
+
+        if key_name in mod_state:
+            mod_state[key_name] = bool(value)
+            if value:
+                mod_keys_down.add(key_name)
+            else:
+                mod_keys_down.discard(key_name)
+
+            # Check all buttons in 'releasing' to see if we should finalize them
+            for (mods, fkey), action in combo_map.items():
+                btn_num = int(action.replace('btn_', ''))
+                if button_states[btn_num] == 'releasing' and not (set(mods) & mod_keys_down):
+                    button_states[btn_num] = 'released'
+                    ui.write(ecodes.EV_KEY, CUSTOM_BTN_BASE + btn_num, 0)
+                    ui.syn()
+                    if args.debug:
+                        print(f"{key_name} released, Button {btn_num} → RELEASED")
             continue
 
-        if code in fkey_base:
-            if value == 1:
-                modifier = current_modifier()
-                fkey_pressed_mods[code] = modifier
+        if key_name.startswith("KEY_F"):
+            if value:
+                fkeys_down.add(key_name)
             else:
-                modifier = fkey_pressed_mods.pop(code, None)
+                fkeys_down.discard(key_name)
 
-            virt_button = get_virtual_button(code, modifier)
-            ui.write(ecodes.EV_KEY, virt_button, value)
-            ui.syn()
-            if args.debug:
-                mod = modifier or "none"
-                btn_num = virt_button - CUSTOM_BTN_BASE
-                print(f"{mod.upper()} + {ecodes.KEY[code]} → Button {btn_num} {'DOWN' if value else 'UP'}")
+        active_mods = frozenset([k for k, v in mod_state.items() if v])
+
+        if value == 1:  # key press
+            # transition pressing
+            for (mods, fkey), action in combo_map.items():
+                btn_num = int(action.replace('btn_', ''))
+                # Check if any modifier key in the combination is pressed
+                if any(mod in active_mods for mod in mods) and button_states[btn_num] == 'released':
+                    button_states[btn_num] = 'pressing'
+                    if args.debug:
+                        print(f"Key {key_name} → Button {btn_num} PRESSING")  # Show the key being pressed
+            # transition to pressed
+            for (mods, fkey), action in combo_map.items():
+                if fkey == key_name:
+                    btn_num = int(action.replace('btn_', ''))
+                    if button_states[btn_num] == 'pressing':
+                        button_states[btn_num] = 'pressed'
+                        ui.write(ecodes.EV_KEY, CUSTOM_BTN_BASE + btn_num, 1)
+                        ui.syn()
+                        if args.debug:
+                            print(f"Key {key_name} → Button {btn_num} PRESSED")  # Show the key being pressed
+                else:
+                    # cancel non-matching pressing
+                    btn_num = int(combo_map[(mods, fkey)].replace('btn_', ''))
+                    if button_states[btn_num] == 'pressing':
+                        button_states[btn_num] = 'released'
+                        if args.debug:
+                            print(f"Key {key_name} → Button {btn_num} CANCELLED")  # Show the key being pressed
+        elif value == 0:  # key release
+            # F-key released triggers releasing state
+            for (mods, fkey), action in combo_map.items():
+                if fkey == key_name:
+                    btn_num = int(action.replace('btn_', ''))
+                    if button_states[btn_num] == 'pressed':
+                        button_states[btn_num] = 'releasing'
+                        if args.debug:
+                            print(f"Key {key_name} → Button {btn_num} RELEASING")  # Show the key being pressed
+            # Now finalize releasing state if no other key is pressed
+            for btn_num, state in button_states.items():
+                if state == 'releasing' and not mod_keys_down:
+                    button_states[btn_num] = 'released'
+                    ui.write(ecodes.EV_KEY, CUSTOM_BTN_BASE + btn_num, 0)
+                    ui.syn()
+                    if args.debug:
+                        print(f"Key {key_name} → Button {btn_num} RELEASED")  # Show the key being released
 
 except KeyboardInterrupt:
     print("\nExiting.")
