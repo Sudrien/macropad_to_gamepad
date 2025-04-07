@@ -45,4 +45,4 @@ ADDITIONAL NOTES
   - http://www.smartyao.com/page91?_l=en
   - http://dme657285d3.pic11.websiteonline.cn/upload/TK_V521_En_230221.rar (archived here)
   - FKEY_and_modifiers_profile.bin is a layout for the 46 key version, 44 and 48 key versions exist and will need a little more work
-
+- You may have to add the current user to the `input` group, or somthing similar, to let the scripts work. `ls -al /dev/input/event*` will tell you which. `libinput list-devices` will tell you if you have the permissions yet.
