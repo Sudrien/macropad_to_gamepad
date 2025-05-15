@@ -52,6 +52,16 @@ capabilities = {
 ui = UInput(capabilities, name='R THQ Toggle', version=0x1, vendor=0x1234, product=0x5678)
 print(f"Created virtual device: {ui.device.name}")
 
+def read_current_throttle():
+    try:
+        dev.capabilities()  # Refresh device
+        abs_state = dev.absinfo(ecodes.ABS_THROTTLE)
+        return abs_state.value
+    except Exception as e:
+        print(f"Error reading current throttle: {e}")
+        return 0
+
+
 # Function to forward or block throttle input
 def forward_throttle(value=None, force=False):
     global last_throttle_value
@@ -68,32 +78,62 @@ def forward_throttle(value=None, force=False):
 # Send initial value
 forward_throttle(force=True)
 
-# Watchdog handler to monitor journal logs
+
 class JournalHandler(FileSystemEventHandler):
+    def __init__(self):
+        super().__init__()
+        self.last_timestamp = None
+        self.file_positions = {}
+
     def on_modified(self, event):
         global SUPERCRUISE_ACTIVE, GAME_RUNNING, last_log_update
         if not event.is_directory and event.src_path.endswith(".log"):
+            log_path = event.src_path
             last_log_update = time.time()
-            if not GAME_RUNNING:
-                print("[ED] Game journal detected.")
-            GAME_RUNNING = True
+
+            if log_path not in self.file_positions:
+                self.file_positions[log_path] = 0
+
             try:
-                with open(event.src_path, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()[-10:]  # Check last few lines
-                    for line in lines:
+                with open(log_path, 'r', encoding='utf-8') as f:
+                    f.seek(self.file_positions[log_path])
+                    new_lines = f.readlines()
+                    self.file_positions[log_path] = f.tell()
+
+                    if not GAME_RUNNING and new_lines:
+                        print("[ED] Game journal detected.")
+
+                    GAME_RUNNING = True
+
+                    for line in new_lines:
                         if not line.strip():
                             continue
                         data = json.loads(line)
+
+                        timestamp = data.get("timestamp")
+                        if self.last_timestamp and timestamp <= self.last_timestamp:
+                            continue  # Skip old or duplicate events
+
+                        self.last_timestamp = timestamp
+
+                        event_type = data.get("event")
                         if data.get("event") == "SupercruiseEntry":
-                            SUPERCRUISE_ACTIVE = True
-                            print("[ED] Entered Supercruise")
-                            forward_throttle(force=True)
-                        elif data.get("event") == "SupercruiseExit":
-                            SUPERCRUISE_ACTIVE = False
-                            print("[ED] Exited Supercruise")
-                            forward_throttle(0, force=True)
+                            if not SUPERCRUISE_ACTIVE:
+                                SUPERCRUISE_ACTIVE = True
+                                current_val = read_current_throttle()
+                                print(f"[ED] Entered Supercruise, setting throttle to current value: {current_val}")
+                                forward_throttle(current_val, force=True)
+                        elif event_type == "SupercruiseExit":
+                            if SUPERCRUISE_ACTIVE:
+                                SUPERCRUISE_ACTIVE = False
+                                print("[ED] Exited Supercruise")
+                                forward_throttle(0, force=True)
             except Exception as e:
                 print(f"Error reading journal: {e}")
+
+
+
+
 
 # Monitor game status separately
 def monitor_game_status():

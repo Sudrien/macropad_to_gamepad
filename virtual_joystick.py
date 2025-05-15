@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+import sys
 import time
 import argparse
 import os
@@ -6,6 +9,8 @@ import array
 import time as systime
 import yaml
 from evdev import InputDevice, categorize, ecodes, UInput, list_devices, AbsInfo
+
+os.chdir(sys.path[0])
 
 # Argument parsing
 parser = argparse.ArgumentParser(description="Virtual Joystick")
