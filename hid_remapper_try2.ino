@@ -19,10 +19,13 @@
   Included support files are unmodified from those repositories.
 */
 
-/* Elite Dangerous Keyboard to Gamepad Converter
- * Maps A-Z and F1-F12 keys from USB keyboard to gamepad controls
- * A-Z = Buttons 1-26, F1-F6 = Buttons 27-32, F7-F12 = D-pad directions
+/* Elite Dangerous Keyboard to Custom Button Converter - macOS Compatible
+ * Maps A-Z and F1-F12 keys from USB keyboard to standard HID button controls
+ * A-Z = Buttons 17-42, F1-F12 = Buttons 43-54
+ * Uses standard HID button ranges for better macOS compatibility
  * NeoPixel status: Red=no device, Orange=connected idle, Green=key pressed
+ * 
+ * Modified to use extended/high standard HID button ranges instead of Linux-specific codes
  */
 
 // USBHost is defined in usbh_helper.h
@@ -45,20 +48,77 @@ const unsigned long KEY_TIMEOUT = 100; // ms to wait before going back to orange
 #define COLOR_DEVICE_IDLE  0xFFA500   // Orange (RGB: 255, 165, 0)
 #define COLOR_KEY_PRESSED  0x00FF00   // Green (RGB: 0, 255, 0)
 
-// HID report descriptor using TinyUSB's template
-// Single Report (no ID) descriptor
-// provides 32 generic buttons, so we also use dpad
+// Button mapping constants
+#define BUTTON_A_START     17  // A-Z keys start at button 17
+#define BUTTON_F_START     43  // F1-F12 keys start at button 43
+#define TOTAL_BUTTONS      48  // Buttons 17-64 (48 total buttons)
+
+// Custom HID report descriptor with standard HID button usage codes
+// Uses buttons 17-64 for better macOS compatibility
 uint8_t const desc_hid_report[] = {
-    TUD_HID_REPORT_DESC_GAMEPAD()
+  0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
+  0x09, 0x04,        // Usage (Game Pad)
+  0xa1, 0x01,        // Collection (Application)
+  
+  // X and Y axes (dummy, always centered)
+  0x09, 0x30,        //   Usage (X)
+  0x09, 0x31,        //   Usage (Y)
+  0x15, 0x00,        //   Logical Minimum (0)
+  0x26, 0xFF, 0x00,  //   Logical Maximum (255)
+  0x75, 0x08,        //   Report Size (8)
+  0x95, 0x02,        //   Report Count (2)
+  0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+  
+  // Z axis (dummy, always centered)
+  0x09, 0x32,        //   Usage (Z)
+  0x15, 0x00,        //   Logical Minimum (0)
+  0x26, 0xFF, 0x00,  //   Logical Maximum (255)
+  0x75, 0x08,        //   Report Size (8)
+  0x95, 0x01,        //   Report Count (1)
+  0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+  
+  // Hat Switch (D-pad) - dummy, always centered
+  0x09, 0x39,        //   Usage (Hat switch)
+  0x15, 0x01,        //   Logical Minimum (1)
+  0x25, 0x08,        //   Logical Maximum (8)
+  0x35, 0x00,        //   Physical Minimum (0)
+  0x46, 0x3B, 0x01,  //   Physical Maximum (315)
+  0x66, 0x14, 0x00,  //   Unit (System: English Rotation, Length: Centimeter)
+  0x75, 0x04,        //   Report Size (4)
+  0x95, 0x01,        //   Report Count (1)
+  0x81, 0x42,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,Null State)
+  
+  // Padding for hat switch (4 bits)
+  0x75, 0x04,        //   Report Size (4)
+  0x95, 0x01,        //   Report Count (1)
+  0x81, 0x01,        //   Input (Const,Array,Abs,No Wrap,Linear,Preferred State,No Null Position)
+  
+  // Standard HID buttons 17-64 (48 buttons total) for better macOS compatibility
+  0x05, 0x09,        //   Usage Page (Button)
+  0x19, 0x11,        //   Usage Minimum (Button 17)
+  0x29, 0x40,        //   Usage Maximum (Button 64)
+  0x15, 0x00,        //   Logical Minimum (0)
+  0x25, 0x01,        //   Logical Maximum (1)
+  0x95, 0x30,        //   Report Count (48) - 48 buttons
+  0x75, 0x01,        //   Report Size (1)
+  0x81, 0x02,        //   Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No Null Position)
+  
+  0xc0,              // End Collection
 };
 
 // USB HID object
 Adafruit_USBD_HID usb_hid;
 
-// Report payload defined in src/class/hid/hid.h
-// - For Gamepad Button Bit Mask see  hid_gamepad_button_bm_t
-// - For Gamepad Hat    Bit Mask see  hid_gamepad_hat_t
-hid_gamepad_report_t gp;
+// Custom report structure
+typedef struct {
+  uint8_t x_axis;     // X axis (always centered at 128)
+  uint8_t y_axis;     // Y axis (always centered at 128)
+  uint8_t z_axis;     // Z axis (always centered at 128)
+  uint8_t hat;        // Hat switch - upper 4 bits unused, lower 4 bits for hat (always 0 = centered)
+  uint8_t buttons[6]; // 48 buttons packed into 6 bytes
+} __attribute__((packed)) custom_hid_report_t;
+
+custom_hid_report_t custom_report;
 
 // NeoPixel status update function
 void update_neopixel_status() {
@@ -76,10 +136,18 @@ void update_neopixel_status() {
   pixels.show();
 }
 
-// Map keyboard input to gamepad controls
-void map_keyboard_to_gamepad(hid_keyboard_report_t const *kb_report, hid_gamepad_report_t *gp_report) {
-  // Clear gamepad report
-  memset(gp_report, 0, sizeof(hid_gamepad_report_t));
+// Map keyboard input to standard HID button controls
+void map_keyboard_to_standard_buttons(hid_keyboard_report_t const *kb_report, custom_hid_report_t *custom_report) {
+  // Clear custom report
+  memset(custom_report, 0, sizeof(custom_hid_report_t));
+  
+  // Set dummy axes to center position
+  custom_report->x_axis = 128;
+  custom_report->y_axis = 128;
+  custom_report->z_axis = 128;
+  
+  // Set hat switch to center (no direction pressed)
+  custom_report->hat = 0; // 0 = centered/no direction
   
   // Check if any keys are pressed for NeoPixel status
   key_currently_pressed = false;
@@ -97,37 +165,26 @@ void map_keyboard_to_gamepad(hid_keyboard_report_t const *kb_report, hid_gamepad
     if (keycode == 0) continue; // Empty slot
     
     uint8_t button_num = 0;
-    bool is_dpad = false;
-    uint8_t dpad_direction = 0;
+    bool valid_mapping = false;
     
-    // Map A-Z (HID keycodes 0x04-0x1D) to buttons 1-26
+    // Map A-Z (HID keycodes 0x04-0x1D) to buttons 0-25 (which correspond to HID buttons 17-42)
     if (keycode >= 0x04 && keycode <= 0x1D) {
-      button_num = keycode - 0x04 + 1; // A=1, B=2, ..., Z=26
+      button_num = keycode - 0x04; // A=0, B=1, ..., Z=25 (internal numbering)
+      valid_mapping = true;
     }
-    // Map F1-F12 (HID keycodes 0x3A-0x45) to buttons 27-32, then dpad
+    // Map F1-F12 (HID keycodes 0x3A-0x45) to buttons 26-37 (HID buttons 43-54)
     else if (keycode >= 0x3A && keycode <= 0x45) {
       uint8_t f_key_index = keycode - 0x3A; // F1=0, F2=1, ..., F12=11
-      if (f_key_index < 6) {
-        button_num = 27 + f_key_index; // F1=27, F2=28, ..., F6=32
-      } else {
-        // F7-F12 map to dpad directions
-        is_dpad = true;
-        switch (f_key_index) {
-          case 6:  dpad_direction = 1; break; // F7 = UP
-          case 7:  dpad_direction = 2; break; // F8 = UP_RIGHT  
-          case 8:  dpad_direction = 3; break; // F9 = RIGHT
-          case 9:  dpad_direction = 4; break; // F10 = DOWN_RIGHT
-          case 10: dpad_direction = 5; break; // F11 = DOWN
-          case 11: dpad_direction = 6; break; // F12 = DOWN_LEFT
-        }
-      }
+      button_num = 26 + f_key_index; // F1=26, F2=27, ..., F12=37 (internal numbering)
+      valid_mapping = true;
     }
     
     // Apply the mapping
-    if (is_dpad) {
-      gp_report->hat = dpad_direction;
-    } else if (button_num > 0 && button_num <= 32) {
-      gp_report->buttons |= (1UL << (button_num - 1)); // Convert to 0-based bit position
+    if (valid_mapping && button_num < TOTAL_BUTTONS) {
+      // Set the appropriate bit in the button array
+      uint8_t byte_index = button_num / 8;
+      uint8_t bit_index = button_num % 8;
+      custom_report->buttons[byte_index] |= (1 << bit_index);
     }
   }
 }
@@ -161,7 +218,12 @@ void setup() {
   }
 
   //while ( !Serial ) delay(10);   // wait for native usb
-  Serial.println("TinyUSB Host HID Elite Dangerous Keyboard to Gamepad Converter");
+  Serial.println("TinyUSB Host HID Elite Dangerous Keyboard to Standard Button Converter (macOS Compatible)");
+  Serial.println("Button mapping:");
+  Serial.println("  A-Z keys → Standard HID buttons 17-42");
+  Serial.println("  F1-F12 keys → Standard HID buttons 43-54");
+  Serial.println("Added dummy D-pad and axes for better game compatibility");
+  Serial.println("Using standard HID button ranges for macOS compatibility");
 }
 
 //--------------------------------------------------------------------+
@@ -182,7 +244,7 @@ void loop() {
   // Update NeoPixel status
   update_neopixel_status();
 
-  // Just wait for keyboard input, no automatic gamepad testing
+  // Just wait for keyboard input, no automatic testing
   delay(10);
 }
 
@@ -238,7 +300,7 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
   key_currently_pressed = false; // Clear key state
 }
 
-// Process incoming keyboard reports and convert to gamepad
+// Process incoming keyboard reports and convert to standard button reports
 void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t const *report, uint16_t len) {
   Serial.printf("Report (%d bytes): ", len);
   for(int i = 0; i < len; i++) {
@@ -272,23 +334,40 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
   }
   Serial.println();
   
-  // Map keyboard to gamepad
-  hid_gamepad_report_t gamepad_report;
-  map_keyboard_to_gamepad(kb_report, &gamepad_report);
+  // Map keyboard to standard HID buttons
+  custom_hid_report_t custom_button_report;
+  map_keyboard_to_standard_buttons(kb_report, &custom_button_report);
   
-  // Debug: Print gamepad mapping
-  if (gamepad_report.buttons != 0) {
-    Serial.printf("Gamepad Buttons: 0x%08lx\r\n", gamepad_report.buttons);
-  }
-  if (gamepad_report.hat != 0) {
-    Serial.printf("Gamepad Hat: %d\r\n", gamepad_report.hat);
+  // Debug: Print standard button mapping
+  bool any_pressed = false;
+  for (int i = 0; i < 6; i++) {
+    if (custom_button_report.buttons[i] != 0) {
+      any_pressed = true;
+      break;
+    }
   }
   
-  // Send gamepad report to PC
+  if (any_pressed) {
+    Serial.printf("Standard HID Buttons: ");
+    for (int byte_idx = 0; byte_idx < 6; byte_idx++) {
+      if (custom_button_report.buttons[byte_idx] != 0) {
+        for (int bit_idx = 0; bit_idx < 8; bit_idx++) {
+          if (custom_button_report.buttons[byte_idx] & (1 << bit_idx)) {
+            int button_num = (byte_idx * 8) + bit_idx;
+            int hid_button = BUTTON_A_START + button_num; // Convert to actual HID button number
+            Serial.printf("Btn%d(HID:%d) ", button_num, hid_button);
+          }
+        }
+      }
+    }
+    Serial.println();
+  }
+  
+  // Send standard button report to PC
   while (!usb_hid.ready()) {
     yield();
   }
-  usb_hid.sendReport(0, &gamepad_report, sizeof(gamepad_report));
+  usb_hid.sendReport(0, &custom_button_report, sizeof(custom_button_report));
 
   // Update NeoPixel status after processing keys
   update_neopixel_status();
