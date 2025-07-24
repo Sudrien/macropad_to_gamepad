@@ -57,7 +57,7 @@ const unsigned long KEY_TIMEOUT = 100; // ms to wait before going back to orange
 // Uses buttons 17-64 for better macOS compatibility
 uint8_t const desc_hid_report[] = {
   0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
-  0x09, 0x04,        // Usage (Game Pad)
+  0x09, 0x05,        // Usage (Joystick)
   0xa1, 0x01,        // Collection (Application)
   
   // X and Y axes (dummy, always centered)
